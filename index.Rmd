@@ -2,29 +2,138 @@
 title: "Practical Machine Learning Course Project"
 author: "Felix Schneider"
 date: "7/31/2020"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE)
+library(dplyr)
+library(ggplot2)
 ```
 
-## R Markdown
+# Introduction
+The purpose of the analysis is to use accelerometer data on belt, forearm, arm and dumbbell of 6 individuals performing barbell lifts. They are asked to perform the lifts correctly as well as incorrectly in 4 different ways. The goal of the analysis is to predict the manner in which they performed the exercise.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# The Data
+The data come from this source: http://groupware.les.inf.puc-rio.br/har
+```{r download_and_load_data, cache=TRUE}
+trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testURL  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(trainURL,"pml-training.csv")
+download.file(testURL, "pml-testing.csv")
+pml_training <- read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!"))
+pml_testing  <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!"))
+```
+```{r dim_training_testing}
+dim(pml_training)
+dim(pml_testing)
+```
+```{r}
+table(colSums(is.na(pml_training)))
+table(colSums(is.na(pml_testing)))
+```
+```{r}
+table(pml_training$new_window)
+table(pml_testing$new_window)
+```
+```{r remove_NA_columns}
+notNA <- colSums(is.na(pml_training))==0
+train <- pml_training[,notNA][,-1]
+test  <- pml_testing[,notNA][,-1]
 ```
 
-## Including Plots
+# The Features
+## Measured Variables
+The label `classe` assumes one of 5 distinct values.
+```{r}
+unique(train$classe)
+```
+The labels correspond to the following executions of the weight lifting exercise.
+ 
+ label | execution
+ ------|----------
+ A | correct execution
+ B | throwing elbows to the front
+ C | lifting dumbbell only halfway
+ D | lowering doumbbell only halfway
+ E | throwing the hips to the front
+ 
+The variables come from 4 sensors (IMUs, Inertial Measurement Unit) mounted on
 
-You can also embed plots, for example:
+1. arm
+1. forearm
+1. belt
+1. dumbbell
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+of the participants.
+
+Each IMU measured the 3 cartesian components (`x`,`y`,`z`) of three different quantities:
+
+1. linear acceleration (`accel`)
+1. angular acceleration (`gyros`)
+1. earth magnetic field (`magnet`)
+
+Further, the orientation of the IMU was measured with the 3 angles
+
+1. roll
+1. pitch
+1. yaw
+
+Finally, 8 derived quantities are calculated
+
+1. mean (`avg`)
+1. variance (`var`)
+1. standard deviation (`stddev`)
+1. minimum (`min`)
+1. maximum (`max`)
+1. amplitude (`amplitude`)
+1. kurtosis (`kurtosis`)
+1. skewness (`skewness`)
+
+## Features
+```{r}
+X_train <- select(train,roll_belt:magnet_forearm_z)
+y_train <- factor(train$classe)
+X_test  <- select(test,roll_belt:magnet_forearm_z)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Algorithm
+- *How do I build the model?*
+- *How do I use cross validation?*
+- *What is the expected out of sample error?*
+- *Why did I make the choices?*
+
+The problem is a *multiclass* classification problem.
+Start with a coarse model to get a feel of the calculation time.
+```{r message=FALSE}
+library(caret)
+library(doParallel)
+```
+```{r sample_to_reduce_training_data, eval=FALSE, include=FALSE}
+sample_size <- 1000
+sample <- sample(1:nrow(X_train),sample_size,replace=FALSE)
+X_train <- X_train[sample,]
+y_train <- y_train[sample]
+```
+
+```{r}
+cl <- makePSOCKcluster(8)
+registerDoParallel(cl)
+tic <- Sys.time()
+# mdl01RF <- train(y=y_train,x=X_train,method="rf")
+toc <- Sys.time()
+stopCluster(cl)
+print(toc-tic)
+```
+
+# Prediction
+```{r eval=FALSE, include=TRUE}
+prd01RF <- predict(mdl01RF,X_test)
+prd01RF
+```
+
+# Conclusion
