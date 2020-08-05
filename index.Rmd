@@ -123,29 +123,33 @@ X_quiz  <- select(quiz,roll_belt:magnet_forearm_z)
 
 The problem is a *multiclass* classification problem.
 Start with a coarse model to get a feel of the calculation time.
-```{r message=FALSE}
-library(caret)
-library(doParallel)
-```
-```{r sample_to_reduce_training_data, eval=FALSE, include=FALSE}
-# sample_size <- 1000
-# sample <- sample(1:nrow(X_train),sample_size,replace=FALSE)
-# X_train <- X_train[sample,]
-# y_train <- y_train[sample]
+
+Set aside an evaluation data set to evaluate out-of-sample error.
+```{r create_data_partitions}
+inBuild <- createDataPartition(y=y_train, p=0.8, list=FALSE)
+build <- train[ inBuild,]
+evalu <- train[-inBuild,]
 ```
 
-```{r}
+Set resampling method to `"cv"` for cross validation.
+```{r set_traincontrol_parameters}
+tc <- trainControl(method="cv")
+```
+
+I chose the train method `parRF` because I want to plot Variable Importance and I hope this method provides this because it requires the package `RandomForest` which creates a model object that can be plotted with `varImpPlot()`.
+```{r fit_model, cache=TRUE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
-# mdl01RF <- train(y=y_train,x=X_train,method="rf")
+mdl02parRF <- train(classe~., data=build, method="parRF", trControl=tc, importance=TRUE)
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
-mdl01RF$times
+mdl02parRF$times
 ```
-```{r}
-save(mdl01RF,file="./models/mdl01RF.RData")
+```{r print_and_save_model}
+mdl02parRF
+save(mdl02parRF,file="./RData/mdl02RF.RData")
 ```
 ## Cross Validation
 
@@ -153,8 +157,9 @@ save(mdl01RF,file="./models/mdl01RF.RData")
 
 # Prediction
 ```{r}
-prd01RF <- predict(mdl01RF,X_quiz)
-prd01RF
+prd02parRF <- predict(mdl02parRF,X_quiz)
+prd02parRF
+save(prd02parRF,file="./RData/prd02parRF.RData")
 ```
 
 # Conclusion
