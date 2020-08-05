@@ -126,7 +126,7 @@ Start with a coarse model to get a feel of the calculation time.
 
 Set aside an evaluation data set to evaluate out-of-sample error.
 ```{r create_data_partitions}
-inBuild <- createDataPartition(y=y_train, p=0.8, list=FALSE)
+inBuild <- createDataPartition(y=train$classe, p=0.8, list=FALSE)
 build <- train[ inBuild,]
 evalu <- train[-inBuild,]
 ```
