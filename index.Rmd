@@ -154,6 +154,9 @@ save(mdl02parRF,file="./RData/mdl02RF.RData")
 ## Cross Validation
 
 ## Out-Of-Sample Error
+```{r}
+confusionMatrix(mdl02parRF,evalu$classe)
+```
 
 # Prediction
 ```{r}
