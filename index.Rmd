@@ -16,7 +16,7 @@ library(ggplot2)
 ```
 
 # Introduction
-The purpose of the analysis is to use accelerometer data on belt, forearm, arm and dumbbell of 6 individuals performing barbell lifts. They are asked to perform the lifts correctly as well as incorrectly in 4 different ways. The goal of the analysis is to predict the manner in which they performed the exercise.
+The purpose of the analysis is to use accelerometer data on belt, arm, forearm and dumbbell of 6 individuals performing barbell lifts. They are asked to perform the lifts correctly as well as incorrectly in 4 different ways. The goal of the analysis is to predict the manner in which they performed the exercise.
 
 # The Data
 The data come from this source: http://groupware.les.inf.puc-rio.br/har
@@ -102,9 +102,10 @@ X_test  <- select(test,roll_belt:magnet_forearm_z)
 ```
 
 # Algorithm
+## Model
 - *How do I build the model?*
 - *How do I use cross validation?*
-- *What is the expected out of sample error?*
+- *What is the expected out-of-sample error?*
 - *Why did I make the choices?*
 
 The problem is a *multiclass* classification problem.
@@ -114,10 +115,10 @@ library(caret)
 library(doParallel)
 ```
 ```{r sample_to_reduce_training_data, eval=FALSE, include=FALSE}
-sample_size <- 1000
-sample <- sample(1:nrow(X_train),sample_size,replace=FALSE)
-X_train <- X_train[sample,]
-y_train <- y_train[sample]
+# sample_size <- 1000
+# sample <- sample(1:nrow(X_train),sample_size,replace=FALSE)
+# X_train <- X_train[sample,]
+# y_train <- y_train[sample]
 ```
 
 ```{r}
@@ -128,10 +129,17 @@ tic <- Sys.time()
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
+mdl01RF$times
 ```
+```{r}
+save(mdl01RF,file="./models/mdl01RF.RData")
+```
+## Cross Validation
+
+## Out-Of-Sample Error
 
 # Prediction
-```{r eval=FALSE, include=TRUE}
+```{r}
 prd01RF <- predict(mdl01RF,X_test)
 prd01RF
 ```
