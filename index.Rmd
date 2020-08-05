@@ -64,7 +64,7 @@ quiz  <- pml_testing[,notNA][,-1]
 ## Measured Variables
 The label `classe` assumes one of 5 distinct values.
 ```{r}
-unique(train$classe)
+unique(train_notNA$classe)
 ```
 The labels correspond to the following executions of the weight lifting exercise.
  
