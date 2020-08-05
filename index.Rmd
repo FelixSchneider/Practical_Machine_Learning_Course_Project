@@ -56,7 +56,7 @@ table(pml_testing$new_window)
 Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
 ```{r remove_NA_columns}
 notNA <- colSums(is.na(pml_testing))==0
-train <- pml_training[,notNA][,-1]
+train_notNA <- pml_training[,notNA][,-1]
 quiz  <- pml_testing[,notNA][,-1]
 ```
 
@@ -110,8 +110,7 @@ Finally, 8 derived quantities are calculated
 
 ## Features
 ```{r}
-X_train <- select(train,roll_belt:magnet_forearm_z)
-y_train <- factor(train$classe)
+train <- select(train_notNA,roll_belt:magnet_forearm_z,classe)
 X_quiz  <- select(quiz,roll_belt:magnet_forearm_z)
 ```
 
