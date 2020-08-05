@@ -376,7 +376,11 @@ summary {
 <li><a href="#measured-variables"><span class="toc-section-number">3.1</span> Measured Variables</a></li>
 <li><a href="#features"><span class="toc-section-number">3.2</span> Features</a></li>
 </ul></li>
-<li><a href="#algorithm"><span class="toc-section-number">4</span> Algorithm</a></li>
+<li><a href="#algorithm"><span class="toc-section-number">4</span> Algorithm</a><ul>
+<li><a href="#model"><span class="toc-section-number">4.1</span> Model</a></li>
+<li><a href="#cross-validation"><span class="toc-section-number">4.2</span> Cross Validation</a></li>
+<li><a href="#out-of-sample-error"><span class="toc-section-number">4.3</span> Out-Of-Sample Error</a></li>
+</ul></li>
 <li><a href="#prediction"><span class="toc-section-number">5</span> Prediction</a></li>
 <li><a href="#conclusion"><span class="toc-section-number">6</span> Conclusion</a></li>
 </ul>
@@ -384,7 +388,7 @@ summary {
 
 <div id="introduction" class="section level1">
 <h1><span class="header-section-number">1</span> Introduction</h1>
-<p>The purpose of the analysis is to use accelerometer data on belt, forearm, arm and dumbbell of 6 individuals performing barbell lifts. They are asked to perform the lifts correctly as well as incorrectly in 4 different ways. The goal of the analysis is to predict the manner in which they performed the exercise.</p>
+<p>The purpose of the analysis is to use accelerometer data on belt, arm, forearm and dumbbell of 6 individuals performing barbell lifts. They are asked to perform the lifts correctly as well as incorrectly in 4 different ways. The goal of the analysis is to predict the manner in which they performed the exercise.</p>
 </div>
 <div id="the-data" class="section level1">
 <h1><span class="header-section-number">2</span> The Data</h1>
@@ -395,10 +399,12 @@ download.file(trainURL,&quot;pml-training.csv&quot;)
 download.file(testURL, &quot;pml-testing.csv&quot;)
 pml_training &lt;- read.csv(&quot;pml-training.csv&quot;,na.strings=c(&quot;NA&quot;,&quot;#DIV/0!&quot;))
 pml_testing  &lt;- read.csv(&quot;pml-testing.csv&quot;, na.strings=c(&quot;NA&quot;,&quot;#DIV/0!&quot;))</code></pre>
+<p>Check the dimensions.</p>
 <pre class="r"><code>dim(pml_training)
 ## [1] 19622   160
 dim(pml_testing)
 ## [1]  20 160</code></pre>
+<p>Check for <code>NA</code>s.</p>
 <pre class="r"><code>table(colSums(is.na(pml_training)))
 ## 
 ##     0 19216 19217 19218 19220 19221 19225 19226 19227 19248 19293 19294 19296 
@@ -409,6 +415,7 @@ table(colSums(is.na(pml_testing)))
 ## 
 ##   0  20 
 ##  60 100</code></pre>
+<p>There are only 60 columns that have no <code>NA</code>s. 67 columns have 19216 <code>NA</code>s. This can be seen by checking the <code>new_window</code> variable.</p>
 <pre class="r"><code>table(pml_training$new_window)
 ## 
 ##    no   yes 
@@ -417,16 +424,17 @@ table(pml_testing$new_window)
 ## 
 ## no 
 ## 20</code></pre>
-<pre class="r"><code>notNA &lt;- colSums(is.na(pml_training))==0
-train &lt;- pml_training[,notNA][,-1]
-test  &lt;- pml_testing[,notNA][,-1]</code></pre>
+<p>Remove the covariates that are <code>NA</code> in the pml_<strong>testing</strong> set and call it <code>quiz</code> set, because we want to use those covariates for training that are provided for prediction in the Course Project Prediction Quiz.</p>
+<pre class="r"><code>notNA &lt;- colSums(is.na(pml_testing))==0
+train_notNA &lt;- pml_training[,notNA][,-1]
+quiz  &lt;- pml_testing[,notNA][,-1]</code></pre>
 </div>
 <div id="the-features" class="section level1">
 <h1><span class="header-section-number">3</span> The Features</h1>
 <div id="measured-variables" class="section level2">
 <h2><span class="header-section-number">3.1</span> Measured Variables</h2>
 <p>The label <code>classe</code> assumes one of 5 distinct values.</p>
-<pre class="r"><code>unique(train$classe)
+<pre class="r"><code>unique(train_notNA$classe)
 ## [1] &quot;A&quot; &quot;B&quot; &quot;C&quot; &quot;D&quot; &quot;E&quot;</code></pre>
 <p>The labels correspond to the following executions of the weight lifting exercise.</p>
 <table>
@@ -493,35 +501,36 @@ test  &lt;- pml_testing[,notNA][,-1]</code></pre>
 </div>
 <div id="features" class="section level2">
 <h2><span class="header-section-number">3.2</span> Features</h2>
-<pre class="r"><code>X_train &lt;- select(train,roll_belt:magnet_forearm_z)
-y_train &lt;- factor(train$classe)
-X_test  &lt;- select(test,roll_belt:magnet_forearm_z)</code></pre>
+<pre class="r"><code>train &lt;- train_notNA %&gt;%
+  select(roll_belt:magnet_forearm_z,classe) %&gt;%
+  mutate(classe=factor(classe))
+X_quiz  &lt;- select(quiz,roll_belt:magnet_forearm_z)</code></pre>
 </div>
 </div>
 <div id="algorithm" class="section level1">
 <h1><span class="header-section-number">4</span> Algorithm</h1>
+<div id="model" class="section level2">
+<h2><span class="header-section-number">4.1</span> Model</h2>
 <ul>
 <li><em>How do I build the model?</em></li>
 <li><em>How do I use cross validation?</em></li>
-<li><em>What is the expected out of sample error?</em></li>
+<li><em>What is the expected out-of-sample error?</em></li>
 <li><em>Why did I make the choices?</em></li>
 </ul>
 <p>The problem is a <em>multiclass</em> classification problem. Start with a coarse model to get a feel of the calculation time.</p>
-<pre class="r"><code>library(caret)
-library(doParallel)</code></pre>
-<pre class="r"><code>cl &lt;- makePSOCKcluster(8)
-registerDoParallel(cl)
-tic &lt;- Sys.time()
-# mdl01RF &lt;- train(y=y_train,x=X_train,method=&quot;rf&quot;)
-toc &lt;- Sys.time()
-stopCluster(cl)
-print(toc-tic)
-## Time difference of 0.0009999275 secs</code></pre>
+<p>Set aside an evaluation data set to evaluate out-of-sample error.</p>
+<p>Set resampling method to <code>&quot;cv&quot;</code> for cross validation.</p>
+<p>I chose the train method <code>parRF</code> because I want to plot Variable Importance and I hope this method provides this because it requires the package <code>RandomForest</code> which creates a model object that can be plotted with <code>varImpPlot()</code>.</p>
+</div>
+<div id="cross-validation" class="section level2">
+<h2><span class="header-section-number">4.2</span> Cross Validation</h2>
+</div>
+<div id="out-of-sample-error" class="section level2">
+<h2><span class="header-section-number">4.3</span> Out-Of-Sample Error</h2>
+</div>
 </div>
 <div id="prediction" class="section level1">
 <h1><span class="header-section-number">5</span> Prediction</h1>
-<pre class="r"><code>prd01RF &lt;- predict(mdl01RF,X_test)
-prd01RF</code></pre>
 </div>
 <div id="conclusion" class="section level1">
 <h1><span class="header-section-number">6</span> Conclusion</h1>

@@ -33,7 +33,7 @@ The purpose of the analysis is to use accelerometer data on belt, arm, forearm a
 
 # The Data
 The data come from this source: http://groupware.les.inf.puc-rio.br/har
-```{r download_and_load_data, cache=TRUE}
+```{r download_and_load_data, cache=TRUE, include=TRUE, message=FALSE}
 trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testURL  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 download.file(trainURL,"pml-training.csv")
@@ -41,22 +41,23 @@ download.file(testURL, "pml-testing.csv")
 pml_training <- read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!"))
 pml_testing  <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!"))
 ```
-```{r dim_training_testing}
+Check the dimensions.
+```{r dim_training_testing, include=TRUE}
 dim(pml_training)
 dim(pml_testing)
 ```
-Check for `NA`s
-```{r}
+Check for `NA`s.
+```{r check_for_NAs, include=TRUE}
 table(colSums(is.na(pml_training)))
 table(colSums(is.na(pml_testing)))
 ```
-Check `new_window` variable.
-```{r}
+There are only 60 columns that have no `NA`s. 67 columns have 19216 `NA`s. This can be seen by checking the `new_window` variable.
+```{r check_new_window, include=TRUE}
 table(pml_training$new_window)
 table(pml_testing$new_window)
 ```
-Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
-```{r remove_NA_columns}
+Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use those covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
+```{r remove_NA_columns, include=TRUE}
 notNA <- colSums(is.na(pml_testing))==0
 train_notNA <- pml_training[,notNA][,-1]
 quiz  <- pml_testing[,notNA][,-1]
@@ -65,7 +66,7 @@ quiz  <- pml_testing[,notNA][,-1]
 # The Features
 ## Measured Variables
 The label `classe` assumes one of 5 distinct values.
-```{r}
+```{r unique_train_classe, include=TRUE}
 unique(train_notNA$classe)
 ```
 The labels correspond to the following executions of the weight lifting exercise.
@@ -111,7 +112,7 @@ Finally, 8 derived quantities are calculated
 1. skewness (`skewness`)
 
 ## Features
-```{r}
+```{r prepare_train_dataset, include=TRUE}
 train <- train_notNA %>%
   select(roll_belt:magnet_forearm_z,classe) %>%
   mutate(classe=factor(classe))
