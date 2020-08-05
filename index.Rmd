@@ -6,6 +6,8 @@ output:
   html_document: 
     toc: yes
     number_sections: yes
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -110,7 +112,9 @@ Finally, 8 derived quantities are calculated
 
 ## Features
 ```{r}
-train <- select(train_notNA,roll_belt:magnet_forearm_z,classe)
+train <- train_notNA %>%
+  select(roll_belt:magnet_forearm_z,classe) %>%
+  mutate(classe=factor(classe))
 X_quiz  <- select(quiz,roll_belt:magnet_forearm_z)
 ```
 
@@ -137,7 +141,7 @@ tc <- trainControl(method="cv")
 ```
 
 I chose the train method `parRF` because I want to plot Variable Importance and I hope this method provides this because it requires the package `RandomForest` which creates a model object that can be plotted with `varImpPlot()`.
-```{r fit_model, cache=TRUE}
+```{r train_model, cache=TRUE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
@@ -155,7 +159,8 @@ save(mdl02parRF,file="./RData/mdl02RF.RData")
 
 ## Out-Of-Sample Error
 ```{r}
-confusionMatrix(mdl02parRF,evalu$classe)
+X_evalu <- select(evalu,-classe)
+confusionMatrix(predict(mdl02parRF,X_evalu),evalu$classe)
 ```
 
 # Prediction
