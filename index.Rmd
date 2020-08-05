@@ -32,18 +32,21 @@ pml_testing  <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!"))
 dim(pml_training)
 dim(pml_testing)
 ```
+Check for `NA`s
 ```{r}
 table(colSums(is.na(pml_training)))
 table(colSums(is.na(pml_testing)))
 ```
+Check `new_window` variable.
 ```{r}
 table(pml_training$new_window)
 table(pml_testing$new_window)
 ```
+Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
 ```{r remove_NA_columns}
-notNA <- colSums(is.na(pml_training))==0
+notNA <- colSums(is.na(pml_testing))==0
 train <- pml_training[,notNA][,-1]
-test  <- pml_testing[,notNA][,-1]
+quiz  <- pml_testing[,notNA][,-1]
 ```
 
 # The Features
@@ -98,7 +101,7 @@ Finally, 8 derived quantities are calculated
 ```{r}
 X_train <- select(train,roll_belt:magnet_forearm_z)
 y_train <- factor(train$classe)
-X_test  <- select(test,roll_belt:magnet_forearm_z)
+X_quiz  <- select(quiz,roll_belt:magnet_forearm_z)
 ```
 
 # Algorithm
@@ -140,7 +143,7 @@ save(mdl01RF,file="./models/mdl01RF.RData")
 
 # Prediction
 ```{r}
-prd01RF <- predict(mdl01RF,X_test)
+prd01RF <- predict(mdl01RF,X_quiz)
 prd01RF
 ```
 
