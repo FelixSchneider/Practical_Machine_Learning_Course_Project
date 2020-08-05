@@ -9,10 +9,21 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	collapse = TRUE,
+	include = FALSE
+)
 knitr::opts_chunk$set(collapse = TRUE)
 library(dplyr)
 library(ggplot2)
+library(caret)
+library(doParallel)
+library(randomForest)
+library(e1071)
+library(foreach)
+library(import)
 ```
 
 # Introduction
