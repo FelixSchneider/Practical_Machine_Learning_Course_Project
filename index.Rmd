@@ -76,7 +76,7 @@ The labels correspond to the following executions of the weight lifting exercise
  A | correct execution
  B | throwing elbows to the front
  C | lifting dumbbell only halfway
- D | lowering doumbbell only halfway
+ D | lowering dumbbell only halfway
  E | throwing the hips to the front
  
 The variables come from 4 sensors (IMUs, Inertial Measurement Unit) mounted on
@@ -137,8 +137,8 @@ evalu <- train[-inBuild,]
 ```
 
 Set resampling method to `"cv"` for cross validation.
-```{r set_traincontrol_parameters}
-tc <- trainControl(method="cv")
+```{r set_traincontrol_parameters, include=TRUE}
+tc <- trainControl(method="cv", verboseIter=TRUE)
 ```
 
 I chose the train method `parRF` because I want to plot Variable Importance and I hope this method provides this because it requires the package `RandomForest` which creates a model object that can be plotted with `varImpPlot()`.
@@ -146,7 +146,7 @@ I chose the train method `parRF` because I want to plot Variable Importance and 
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
-mdl02parRF <- train(classe~., data=build, method="parRF", trControl=tc, importance=TRUE)
+  mdl02parRF <- train(classe~., data=build, method="parRF", trControl=tc, importance=TRUE, tuneLength=6)
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
@@ -156,12 +156,17 @@ mdl02parRF$times
 mdl02parRF
 save(mdl02parRF,file="./RData/mdl02RF.RData")
 ```
+```{r plot_varImp, include=TRUE}
+ggplot(varImp(mdl02parRF),top=10)
+```
+
 ## Cross Validation
 
 ## Out-Of-Sample Error
-```{r}
+```{r confusion_matrix, include=TRUE}
 X_evalu <- select(evalu,-classe)
-confusionMatrix(predict(mdl02parRF,X_evalu),evalu$classe)
+confMat <- confusionMatrix(predict(mdl02parRF,X_evalu),evalu$classe)
+confMat
 ```
 
 # Prediction
