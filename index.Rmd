@@ -17,7 +17,6 @@ knitr::opts_chunk$set(
 	collapse = TRUE,
 	include = FALSE
 )
-knitr::opts_chunk$set(collapse = TRUE)
 library(dplyr)
 library(ggplot2)
 library(caret)
@@ -51,7 +50,7 @@ Check for `NA`s.
 table(colSums(is.na(pml_training)))
 table(colSums(is.na(pml_testing)))
 ```
-There are only 60 columns that have no `NA`s. 67 columns have 19216 `NA`s. This can be seen by checking the `new_window` variable.
+There are only 60 columns that have no `NA`s. 67 columns have 19216 `NA`s. This is related to the `new_window` variable, as can be see as follows.
 ```{r check_new_window, include=TRUE}
 table(pml_training$new_window)
 table(pml_testing$new_window)
@@ -130,32 +129,63 @@ The problem is a *multiclass* classification problem.
 Start with a coarse model to get a feel of the calculation time.
 
 Set aside an evaluation data set to evaluate out-of-sample error.
-```{r create_data_partitions}
+```{r create_data_partitions, include=TRUE}
 inBuild <- createDataPartition(y=train$classe, p=0.8, list=FALSE)
 build <- train[ inBuild,]
 evalu <- train[-inBuild,]
 ```
 
+```{r create_build_subsample, include=TRUE}
+subSample <- createDataPartition(y=build$classe, p=0.1, list=FALSE)
+build <- build[subSample,]
+```
+
 Set resampling method to `"cv"` for cross validation.
 ```{r set_traincontrol_parameters, include=TRUE}
-tc <- trainControl(method="cv", verboseIter=TRUE)
+tc <- trainControl(method="cv",
+                   preProcOptions=list(thresh=0.95),
+                   verboseIter=TRUE,
+                   timingSamps=1)
 ```
 
 I chose the train method `parRF` because I want to plot Variable Importance and I hope this method provides this because it requires the package `RandomForest` which creates a model object that can be plotted with `varImpPlot()`.
-```{r train_model, cache=TRUE}
+```{r start_parallel_and_clock, include=TRUE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
-  mdl02parRF <- train(classe~., data=build, method="parRF", trControl=tc, importance=TRUE, tuneLength=6)
+```
+
+```{r train_model, cache=TRUE, include=TRUE}
+mdl02parRF <- train(classe~., data=build,
+                    method="parRF",
+                    preProcess=c("center","scale","nzv"),
+                    trControl=tc,
+                    importance=TRUE,
+                    tuneLength=6)
+```
+
+```{r stop_parallel_and_clock, include=TRUE}
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
+```
+
+```{r print_mdl_times, include=TRUE}
 mdl02parRF$times
 ```
-```{r print_and_save_model}
+
+```{r print_model, include=TRUE}
 mdl02parRF
+```
+
+```{r plot_model, include=TRUE}
+ggplot(mdl02parRF)
+```
+
+```{r save_model}
 save(mdl02parRF,file="./RData/mdl02RF.RData")
 ```
+
 ```{r plot_varImp, include=TRUE}
 ggplot(varImp(mdl02parRF),top=10)
 ```
@@ -170,7 +200,7 @@ confMat
 ```
 
 # Prediction
-```{r}
+```{r predict, results='hide'}
 prd02parRF <- predict(mdl02parRF,X_quiz)
 prd02parRF
 save(prd02parRF,file="./RData/prd02parRF.RData")
