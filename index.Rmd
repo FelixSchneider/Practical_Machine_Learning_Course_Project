@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE,
 	collapse = TRUE,
-	include = FALSE
+	include = TRUE
 )
 library(dplyr)
 library(ggplot2)
@@ -32,7 +32,7 @@ The purpose of the analysis is to use accelerometer data on belt, arm, forearm a
 
 # The Data
 The data come from this source: http://groupware.les.inf.puc-rio.br/har
-```{r download_and_load_data, cache=TRUE, include=TRUE, message=FALSE}
+```{r download_and_load_data, cache=TRUE, message=FALSE}
 trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testURL  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 download.file(trainURL,"pml-training.csv")
@@ -41,22 +41,28 @@ pml_training <- read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!"))
 pml_testing  <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!"))
 ```
 Check the dimensions.
-```{r dim_training_testing, include=TRUE}
+```{r dim_training_testing}
 dim(pml_training)
 dim(pml_testing)
 ```
 Check for `NA`s.
-```{r check_for_NAs, include=TRUE}
+```{r are_there_any_NAs}
+any(is.na(pml_training))
+any(is.na(pml_testing))
+```
+
+How many columns have a certain number of NAs?
+```{r how_many_columns_have_how_many_NAs}
 table(colSums(is.na(pml_training)))
 table(colSums(is.na(pml_testing)))
 ```
 There are only 60 columns that have no `NA`s. 67 columns have 19216 `NA`s. This is related to the `new_window` variable, as can be see as follows.
-```{r check_new_window, include=TRUE}
+```{r check_new_window}
 table(pml_training$new_window)
 table(pml_testing$new_window)
 ```
 Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use those covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
-```{r remove_NA_columns, include=TRUE}
+```{r remove_NA_columns}
 notNA <- colSums(is.na(pml_testing))==0
 train_notNA <- pml_training[,notNA][,-1]
 quiz  <- pml_testing[,notNA][,-1]
@@ -65,7 +71,7 @@ quiz  <- pml_testing[,notNA][,-1]
 # The Features
 ## Measured Variables
 The label `classe` assumes one of 5 distinct values.
-```{r unique_train_classe, include=TRUE}
+```{r unique_train_classe}
 unique(train_notNA$classe)
 ```
 The labels correspond to the following executions of the weight lifting exercise.
@@ -111,7 +117,7 @@ Finally, 8 derived quantities are calculated
 1. skewness (`skewness`)
 
 ## Features
-```{r prepare_train_dataset, include=TRUE}
+```{r prepare_train_dataset}
 train <- train_notNA %>%
   select(roll_belt:magnet_forearm_z,classe) %>%
   mutate(classe=factor(classe))
@@ -129,33 +135,33 @@ The problem is a *multiclass* classification problem.
 Start with a coarse model to get a feel of the calculation time.
 
 Set aside an evaluation data set to evaluate out-of-sample error.
-```{r create_data_partitions, include=TRUE}
+```{r create_data_partitions}
 inBuild <- createDataPartition(y=train$classe, p=0.8, list=FALSE)
 build <- train[ inBuild,]
 evalu <- train[-inBuild,]
 ```
 
-```{r create_build_subsample, include=TRUE}
+```{r create_build_subsample}
 subSample <- createDataPartition(y=build$classe, p=0.1, list=FALSE)
 build <- build[subSample,]
 ```
 
 Set resampling method to `"cv"` for cross validation.
-```{r set_traincontrol_parameters, include=TRUE}
+```{r set_traincontrol_parameters}
 tc <- trainControl(method="cv",
                    preProcOptions=list(thresh=0.95),
                    verboseIter=TRUE,
                    timingSamps=1)
 ```
 
-I chose the train method `parRF` because I want to plot Variable Importance and I hope this method provides this because it requires the package `RandomForest` which creates a model object that can be plotted with `varImpPlot()`.
-```{r start_parallel_and_clock, include=TRUE}
+I chose the train method `parRF` because I want to plot Variable Importance and this method provides this because it requires the package `RandomForest` which creates a model object that accepts the `importance=TRUE` parameter.
+```{r start_parallel_and_clock}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
 ```
 
-```{r train_model, cache=TRUE, include=TRUE}
+```{r train_model, cache=TRUE}
 mdl02parRF <- train(classe~., data=build,
                     method="parRF",
                     preProcess=c("center","scale","nzv"),
@@ -164,21 +170,21 @@ mdl02parRF <- train(classe~., data=build,
                     tuneLength=6)
 ```
 
-```{r stop_parallel_and_clock, include=TRUE}
+```{r stop_parallel_and_clock}
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
 ```
 
-```{r print_mdl_times, include=TRUE}
+```{r print_mdl_times}
 mdl02parRF$times
 ```
 
-```{r print_model, include=TRUE}
+```{r print_model}
 mdl02parRF
 ```
 
-```{r plot_model, include=TRUE}
+```{r plot_model}
 ggplot(mdl02parRF)
 ```
 
@@ -186,14 +192,14 @@ ggplot(mdl02parRF)
 save(mdl02parRF,file="./RData/mdl02RF.RData")
 ```
 
-```{r plot_varImp, include=TRUE}
+```{r plot_varImp}
 ggplot(varImp(mdl02parRF),top=10)
 ```
 
 ## Cross Validation
 
 ## Out-Of-Sample Error
-```{r confusion_matrix, include=TRUE}
+```{r confusion_matrix}
 X_evalu <- select(evalu,-classe)
 confMat <- confusionMatrix(predict(mdl02parRF,X_evalu),evalu$classe)
 confMat
