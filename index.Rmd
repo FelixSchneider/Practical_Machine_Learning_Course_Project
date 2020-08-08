@@ -34,7 +34,13 @@ The participants are asked to perform the lifts correctly as well as incorrectly
 The goal of the analysis is to predict the manner in which they performed the exercise from data that were not used in building the model.
 
 # The Data
-The data come from this source: http://groupware.les.inf.puc-rio.br/har
+The data come from the following source: http://groupware.les.inf.puc-rio.br/har
+
+> Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+> Read more: http://groupware.les.inf.puc-rio.br/har#wle_paper_section#ixzz6UVzQ1xJp
+
+First, the data is downloaded and loaded into R data frames.
 ```{r download_and_load_data, cache=TRUE, message=FALSE}
 trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testURL  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
@@ -50,59 +56,50 @@ dim(pml_testing)
 ```
 The training data have 19622 observations and 160 variables, and the testing data have 20 observations and 160 variables.
 
-Check whether there are any `NA`s.
+Check whether there are *any* missing values (`NA`s).
 ```{r are_there_any_NAs}
 any(is.na(pml_training))
 any(is.na(pml_testing))
 ```
+In fact, there *are* any missing values (`NA`s) in both the training and testing data sets.
+
 Are there **any** columns that are **all** `NA`s?
 ```{r any_columns_all_NA}
-all_na <- function(x) all(is.na(x))
-any(sapply(pml_training, all_na))
-any(sapply(pml_testing,  all_na))
+all_NA <- function(x) all(is.na(x))
+any(sapply(pml_training, all_NA))
+any(sapply(pml_testing,  all_NA))
 ```
-In fact there are **any** columns in `pml_training` and `pml_testing` that are **all** NA.
+In fact there *are* **any** columns in `pml_training` and `pml_testing` that are **all** NA.
 
-Which columns are all `NA`s?
-```{r which_training_columns_are_all_NA}
-which(sapply(pml_training, all_na)) %>% as.data.frame()
+<!-- Which columns are *all* `NA`s? -->
+```{r which_training_columns_are_all_NA, include=FALSE, eval=FALSE}
+which(sapply(pml_training, all_NA)) %>% names()
 ```
-```{r which_testing_columns_are_all_NA}
-which(sapply(pml_testing, all_na)) %>% as.data.frame()
+<!-- There are a few columns that are *all* `NA`s in the training set. -->
+```{r which_testing_columns_are_all_NA, include=FALSE, eval=FALSE}
+which(sapply(pml_testing, all_NA)) %>% names()
 ```
+<!-- There are substanitally more columns that are *all* `NA`s in the testing set. -->
+
 How many columns have a certain number of NAs?
 ```{r how_many_columns_have_how_many_NAs}
 table(colSums(is.na(pml_training)))
 table(colSums(is.na(pml_testing)))
 ```
 In `pml_testing` all columns are either *no* `NA`s (`60` columns) or *all* `NA`s (`100` columns).
-In `pml-training` there are relatively few different values of the number of `NA`s. There are only 60 columns that have *no* `NA`s. 67 columns have 19216 `NA`s. This is related to the `new_window` variable, as can be see as follows.
-```{r check_new_window}
-table(pml_training$new_window)
-table(pml_testing$new_window)
-```
-How are the `NA` columns related to the variable `new_window`?
-```{r}
-new_window_yes <- filter(pml_training,new_window=="yes")
-new_window_no  <- filter(pml_training,new_window=="no")
-```
-```{r}
-table(colSums(is.na(new_window_yes)))
-table(colSums(is.na(new_window_no)))
-```
-```{r table_pml-training_new_window}
-table(pml_training$new_window)
-```
-```{r table_pm-training_new_window_is_na, eval=FALSE}
-table(pml_training$new_window,is.na(pml_training))
-```
+In `pml-training` there are relatively few different values of the number of `NA`s.
+There are only 60 columns that have *no* `NA`s. 67 columns have 19216 `NA`s. And 6 columns have 19622 `NA`s, i.e. the number of observations in the data set.
 
-
-Remove the covariates that are `NA` in the pml_**testing** set and call it `quiz` set, because we want to use those covariates for training that are provided for prediction in the Course Project Prediction Quiz. 
+Because we want to use only those variables for training that are provided for prediction in the *Course Project Prediction Quiz*, we remove the variables that are `NA` in the pml_**testing** set.
+The resulting data frames are called `train_notNA` and `quiz` respectively.
 ```{r remove_NA_columns}
 notNA <- colSums(is.na(pml_testing))==0
 train_notNA <- pml_training[,notNA][,-1]
 quiz  <- pml_testing[,notNA][,-1]
+```
+```{r select_notNA_columns}
+not_all_NA <- function(x) !all(is.na(x))
+quiz2 <- pml_testing %>% select_if(not_all_NA) %>% select(-X)
 ```
 
 # The Features
