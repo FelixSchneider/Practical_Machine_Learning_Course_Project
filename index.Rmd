@@ -94,12 +94,25 @@ Because we want to use only those variables for training that are provided for p
 The resulting data frames are called `train_notNA` and `quiz` respectively.
 ```{r remove_NA_columns}
 notNA <- colSums(is.na(pml_testing))==0
-train_notNA <- pml_training[,notNA][,-1]
-quiz  <- pml_testing[,notNA][,-1]
+train_notNA <- pml_training[,notNA][,-1] # remove first column 'X'
+quiz  <- pml_testing[,notNA][,-1] # remove first column 'X'
 ```
-```{r select_notNA_columns}
+```{r select_notNA_columns, include=FALSE, eval=FALSE}
+# try to use 'select()' so select not all NA columns
 not_all_NA <- function(x) !all(is.na(x))
-quiz2 <- pml_testing %>% select_if(not_all_NA) %>% select(-X)
+
+notNA2 <- pml_testing %>% # named integer; this is required by 'select()'
+            sapply(not_all_NA) %>%
+            which()
+notNA3 <- pml_testing %>% # named logical; this is the equivalent to the colSums() solution
+            sapply(not_all_NA)
+
+train_notNA2 <- pml_training %>%
+                  select(as.integer(notNA2),-X) # 'select()' requires an 'integer' or 'character' vector
+
+quiz2 <- pml_testing %>%
+          select_if(not_all_NA) %>% # 'select_if()' requires a function that returns 'logical'
+          select(-X)
 ```
 
 # The Features
