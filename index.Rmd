@@ -66,8 +66,8 @@ In fact, there *are* any missing values (`NA`s) in both the training and testing
 Are there **any** columns that are **all** `NA`s?
 ```{r any_columns_all_NA}
 all_NA <- function(x) all(is.na(x))
-any(sapply(pml_training, all_NA))
-any(sapply(pml_testing,  all_NA))
+pml_training %>% sapply(all_NA) %>% any()
+pml_testing %>% sapply(all_NA) %>% any()
 ```
 In fact there *are* **any** columns in `pml_training` and `pml_testing` that are **all** NA.
 
@@ -90,7 +90,7 @@ In `pml_testing` all columns are either *no* `NA`s (`60` columns) or *all* `NA`s
 In `pml-training` there are relatively few different values of the number of `NA`s.
 There are only 60 columns that have *no* `NA`s. 67 columns have 19216 `NA`s. And 6 columns have 19622 `NA`s, i.e. the number of observations in the data set.
 
-Because we want to use only those variables for training that are provided for prediction in the *Course Project Prediction Quiz*, we remove the variables that are `NA` in the pml_**testing** set.
+Because we want to use only those variables for training the model that are provided for prediction in the *Course Project Prediction Quiz*, we remove the variables that are `NA` in the pml_**testing** set.
 The resulting data frames are called `train_notNA` and `quiz` respectively.
 ```{r remove_NA_columns}
 notNA <- colSums(is.na(pml_testing))==0
