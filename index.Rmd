@@ -222,10 +222,10 @@ tic <- Sys.time()
 ```
 
 ```{r train_model, cache=TRUE}
-mdl02parRF <- train(classe~., data=build,
+model <- train(classe~., data=build,
                     method="parRF",
-                    preProcess=c("center","scale","nzv"),
-                    trControl=tc,
+                    # preProcess=c("center","scale","nzv"),
+                    trControl=ctrl,
                     importance=TRUE,
                     tuneLength=6)
 ```
@@ -236,24 +236,24 @@ stopCluster(cl)
 print(toc-tic)
 ```
 
-```{r print_mdl_times}
-mdl02parRF$times
+```{r print_model_times}
+model$times
 ```
 
 ```{r print_model}
-mdl02parRF
+model
 ```
 
 ```{r plot_model}
-ggplot(mdl02parRF)
+ggplot(model)
 ```
 
-```{r save_model}
-save(mdl02parRF,file="./RData/mdl02RF.RData")
+```{r save_model, include=FALSE, eval=TRUE}
+save(model, file="./RData/model.RData")
 ```
 
 ```{r plot_varImp}
-ggplot(varImp(mdl02parRF),top=10)
+ggplot(varImp(model), top=10)
 ```
 
 ## Cross Validation
@@ -261,15 +261,18 @@ ggplot(varImp(mdl02parRF),top=10)
 ## Out-Of-Sample Error
 ```{r confusion_matrix}
 X_evalu <- select(evalu,-classe)
-confMat <- confusionMatrix(predict(mdl02parRF,X_evalu),evalu$classe)
+confMat <- confusionMatrix(predict(model,X_evalu),evalu$classe)
 confMat
 ```
 
 # Prediction
-```{r predict, results='hide'}
-prd02parRF <- predict(mdl02parRF,X_quiz)
-prd02parRF
-save(prd02parRF,file="./RData/prd02parRF.RData")
+```{r predict_quiz, results='hide'}
+prediction <- predict(model,X_quiz)
+prediction
+```
+
+```{r predict, include=FALSE, eval=TRUE}
+save(prediction, file="./RData/prediction.RData")
 ```
 
 # Conclusion
