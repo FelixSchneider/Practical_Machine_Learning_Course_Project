@@ -34,6 +34,7 @@ The participants are asked to perform the lifts correctly as well as incorrectly
 The goal of the analysis is to predict the manner in which they performed the exercise from data that were not used in building the model.
 
 # The Data
+## Source
 The data come from the following source: http://groupware.les.inf.puc-rio.br/har
 
 > Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
@@ -56,6 +57,7 @@ dim(pml_testing)
 ```
 The training data have 19622 observations and 160 variables, and the testing data have 20 observations and 160 variables.
 
+## Missing Values
 Check whether there are *any* missing values (`NA`s).
 ```{r are_there_any_NAs}
 any(is.na(pml_training))
@@ -163,7 +165,7 @@ Finally, 8 derived quantities are calculated
 1. kurtosis (`kurtosis`)
 1. skewness (`skewness`)
 
-## Features
+## Selected Features
 From the columns without `NA`s, select the measured variables as features.
 ```{r identify_features}
 names(train_notNA)
@@ -182,7 +184,7 @@ The `X_quiz` data set obviously does not contain a target variable since this is
 
 # Algorithm
 ## Model
-The following questions should be adressed in this report:
+The following questions should be addressed in this report:
 
 - *How is the model built?*
 - *How is cross validation used?*
@@ -192,9 +194,8 @@ The following questions should be adressed in this report:
 The problem is a *multiclass* classification problem.
 Since accuracy is a major requirement, and speed is less of a concern, I decide to use a Random Forrest model.
 
-
 I am not sure if the `Accuracy` data that the `train` command generates are *out-of-sample* errors, so I set aside an evaluation data set to evaluate out-of-sample error. The data set that is used to build the model is called `build` and the data set that is used to evaluate the out-of-sample error is called `evalu`.
-```{r create_data_partitions}
+```{r create_build_and_evalu_partitions}
 inBuild <- createDataPartition(y=train$classe, p=0.8, list=FALSE)
 build <- train[ inBuild,]
 evalu <- train[-inBuild,]
