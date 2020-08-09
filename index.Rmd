@@ -184,12 +184,20 @@ The `train` data set is contains the target variable `classe` to be able to use 
 The `X_quiz` data set obviously does not contain a target variable since this is to be predicted.
 
 To visualize the `train` data set, an image is plotted. Before plotting, the data are scaled.
-```{r image_plot_of_train}
+```{r image_plot_of_train, results='hold'}
+opar <- par(mar=c(4,3,3,2),mgp=c(1,1,0))
 train[,-53] %>%
   as.matrix() %>% # the 'image.plot()' function requires a 'matrix'
   scale() %>%
   t() %>%
-  image.plot(zlim=c(-1,1),axes=FALSE)
+  image.plot(zlim=c(-1,1)
+             ,axes=FALSE
+             # ,par=list(mar=c(1,3,3,3))
+             )
+title(main="Scaled Variable Values (in units of Standard Deviations)",
+      xlab="Variables",
+      ylab="Observations")
+par(opar)
 ```
 
 # Algorithm
@@ -202,7 +210,7 @@ The following questions should be addressed in this report:
 - *Why were these choices made?*
 
 The problem is a *multiclass* classification problem.
-Since accuracy is a major requirement, and speed is less of a concern, I decide to use a **Random Forrest** model.
+Since accuracy is a major requirement, and speed is less of a concern, I decide to use a **Random Forest** model.
 
 I am not sure if the `Accuracy` data that the `train` command generates are *out-of-sample* errors, so I set aside an evaluation data set to evaluate out-of-sample error. The data set that is used to build the model is called `build` and the data set that is used to evaluate the out-of-sample error is called `evalu`.
 ```{r create_build_and_evalu_partitions}
@@ -218,11 +226,13 @@ build <- build[subSample,]
 ```
 
 Set resampling method to `"cv"` for cross validation.
-The tunig parameter is `mtry` the number of predictors used for fitting the model. No preprocessing is used. I use 5 Cross Validation hold-out samples, and do 2 repeates just to see the effect.
+The tunig parameter is `mtry` the number of predictors used for fitting the model.
+No preprocessing is used.
+I use 5 Cross Validation hold-out samples.
 ```{r set_traincontrol_parameters}
 ctrl <- trainControl(method="cv",
                      number=5, # number of Cross Validation hold-out samples
-                     repeats=2, 
+                     # repeats=2, # no meaning for method="cv"
                      # preProcOptions=list(thresh=0.95),
                      verboseIter=TRUE,
                      returnResamp="all",
@@ -232,7 +242,7 @@ ctrl <- trainControl(method="cv",
 
 The multicore cluster is initialized and registered for parallel execution.
 The current time is recorded in `tic` to measure elapsed time after completion of training.
-```{r start_parallel_and_clock}
+```{r start_parallel_and_clock, cache=TRUE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
@@ -249,7 +259,7 @@ model <- train(classe~., data=build,
                tuneLength=6)
 ```
 I record the current time `toc`, stop the multicore cluster and print the elapsed time.
-```{r stop_parallel_and_clock}
+```{r stop_parallel_and_clock, cache=TRUE}
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
@@ -264,8 +274,14 @@ model
 ```
 The Accuracy over the different number of predictors is plotted as follows.
 ```{r plot_model}
-ggplot(model)
+qplot(x=mtry, y=Accuracy, data=model$resample,
+      color=Resample,
+      geom=c("line","point"),
+      # geom=c("boxplot"),
+      # fill=Resample,
+      xlab="# randomly selected predictors")
 ```
+
 One can see from the numbers and from the plot that the accuracy varies only in a very narrow band across the number of randomly selected predictors.
 ```{r save_model, include=FALSE, eval=TRUE}
 save(model, file="./RData/model.RData")
@@ -276,7 +292,7 @@ The importance of variables is plotted as follows.
 ggplot(varImp(model), top=10)
 ```
 
-## Cross Validation
+One can see that the belt, dumbbell and forearm are among the most important predictors. The sensor on the arm does not contribute to the most important variables.
 
 ## Out-Of-Sample Error
 To get an estimate for the out-of-sample error, the model is predicted for the hold-out data `evalu`.
@@ -293,6 +309,8 @@ qplot(data=as.data.frame(proportions(confMat$table, margin=1), responseName="Pro
       geom="raster", fill=Proportion)
 ```
 
+The plot visualizes the high accuracy of the out-of-sample prediction which is an indication that the model has **no overfitting**.
+
 # Prediction
 The data records that are to be reported in the Quiz are predicted. The results are hidden since they are evaluated by the Quiz.
 ```{r predict_quiz, results='hide'}
@@ -303,5 +321,3 @@ prediction
 ```{r save_prediction, include=FALSE, eval=TRUE}
 save(prediction, file="./RData/prediction.RData")
 ```
-
-# Conclusion
