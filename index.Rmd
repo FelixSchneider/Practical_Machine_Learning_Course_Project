@@ -26,6 +26,7 @@ library(randomForest)
 library(e1071)
 library(foreach)
 library(import)
+library(fields) # for 'image.plot()'
 ```
 
 # Introduction
@@ -182,6 +183,15 @@ X_quiz <- quiz %>%
 The `train` data set is contains the target variable `classe` to be able to use the *formula* interface of the `train` command.
 The `X_quiz` data set obviously does not contain a target variable since this is to be predicted.
 
+To visualize the `train` data set, an image is plotted. Before plotting, the data are scaled.
+```{r image_plot_of_train}
+train[,-53] %>%
+  as.matrix() %>% # the 'image.plot()' function requires a 'matrix'
+  scale() %>%
+  t() %>%
+  image.plot(zlim=c(-1,1),axes=FALSE)
+```
+
 # Algorithm
 ## Model
 The following questions should be addressed in this report:
@@ -202,15 +212,17 @@ evalu <- train[-inBuild,]
 ```
 
 <!-- The following chunk is used to reduce the amount of data to achieve moderate calculation times for the 'train' function. Should be `eval=FALSE` in the final commit. -->
-```{r create_build_subsample, include=FALSE, eval=TRUE}
-subSample <- createDataPartition(y=build$classe, p=0.1, list=FALSE)
+```{r create_build_subsample, include=FALSE, eval=FALSE}
+subSample <- createDataPartition(y=build$classe, p=1.0, list=FALSE)
 build <- build[subSample,]
 ```
 
 Set resampling method to `"cv"` for cross validation.
+The tunig parameter is `mtry` the number of predictors used for fitting the model. No preprocessing is used.
 ```{r set_traincontrol_parameters}
 ctrl <- trainControl(method="cv",
-                   preProcOptions=list(thresh=0.95),
+                     number=5, # number of Cross Validation hold-out samples
+                   # preProcOptions=list(thresh=0.95),
                    verboseIter=TRUE,
                    timingSamps=1)
 ```
@@ -222,6 +234,7 @@ registerDoParallel(cl)
 tic <- Sys.time()
 ```
 
+To see the performance of the model building process across the tuning parameter, I choose `tuneLength=6` to get Accuracy values for 6 different values of `mtry`, instead of the default which is 3.
 ```{r train_model, cache=TRUE}
 model <- train(classe~., data=build,
                     method="parRF",
@@ -260,10 +273,18 @@ ggplot(varImp(model), top=10)
 ## Cross Validation
 
 ## Out-Of-Sample Error
+To get an estimate for the out-of-sample error, the model is predicted for the hold-out data `evalu`.
+With the prediction, a Confusion Matrix is constructed.
 ```{r confusion_matrix}
 X_evalu <- select(evalu,-classe)
 confMat <- confusionMatrix(predict(model,X_evalu),evalu$classe)
 confMat
+```
+The proportions in the Confusion Matrix are plotted.
+```{r plot_confusion_matrix}
+qplot(data=as.data.frame(proportions(confMat$table, margin=1), responseName="Proportion"),
+      x=Reference, y=Prediction,
+      geom="raster", fill=Proportion)
 ```
 
 # Prediction
@@ -272,7 +293,7 @@ prediction <- predict(model,X_quiz)
 prediction
 ```
 
-```{r predict, include=FALSE, eval=TRUE}
+```{r save_prediction, include=FALSE, eval=TRUE}
 save(prediction, file="./RData/prediction.RData")
 ```
 
