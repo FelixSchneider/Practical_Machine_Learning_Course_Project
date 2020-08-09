@@ -124,7 +124,7 @@ The label `classe` assumes one of 5 distinct values.
 ```{r unique_train_classe}
 unique(train_notNA$classe)
 ```
-The labels correspond to the following executions of the weight lifting exercise.
+The labels correspond to the following manners of executions of the weight lifting exercise.
  
  label | execution
  ------|----------
@@ -202,7 +202,7 @@ The following questions should be addressed in this report:
 - *Why were these choices made?*
 
 The problem is a *multiclass* classification problem.
-Since accuracy is a major requirement, and speed is less of a concern, I decide to use a Random Forrest model.
+Since accuracy is a major requirement, and speed is less of a concern, I decide to use a **Random Forrest** model.
 
 I am not sure if the `Accuracy` data that the `train` command generates are *out-of-sample* errors, so I set aside an evaluation data set to evaluate out-of-sample error. The data set that is used to build the model is called `build` and the data set that is used to evaluate the out-of-sample error is called `evalu`.
 ```{r create_build_and_evalu_partitions}
@@ -218,54 +218,60 @@ build <- build[subSample,]
 ```
 
 Set resampling method to `"cv"` for cross validation.
-The tunig parameter is `mtry` the number of predictors used for fitting the model. No preprocessing is used.
+The tunig parameter is `mtry` the number of predictors used for fitting the model. No preprocessing is used. I use 5 Cross Validation hold-out samples, and do 2 repeates just to see the effect.
 ```{r set_traincontrol_parameters}
 ctrl <- trainControl(method="cv",
                      number=5, # number of Cross Validation hold-out samples
-                   # preProcOptions=list(thresh=0.95),
-                   verboseIter=TRUE,
-                   timingSamps=1)
+                     repeats=2, 
+                     # preProcOptions=list(thresh=0.95),
+                     verboseIter=TRUE,
+                     returnResamp="all",
+                     savePredictions="final",
+                     timingSamps=100)
 ```
 
-I chose the train method `parRF` because I want to plot Variable Importance and this method provides this because it requires the package `RandomForest` which creates a model object that accepts the `importance=TRUE` parameter.
+The multicore cluster is initialized and registered for parallel execution.
+The current time is recorded in `tic` to measure elapsed time after completion of training.
 ```{r start_parallel_and_clock}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 tic <- Sys.time()
 ```
 
+I chose the train method `parRF` because I want to plot Variable Importance and this method provides this because it requires the package `RandomForest` which creates a model object that accepts the `importance=TRUE` parameter.
 To see the performance of the model building process across the tuning parameter, I choose `tuneLength=6` to get Accuracy values for 6 different values of `mtry`, instead of the default which is 3.
 ```{r train_model, cache=TRUE}
 model <- train(classe~., data=build,
-                    method="parRF",
-                    # preProcess=c("center","scale","nzv"),
-                    trControl=ctrl,
-                    importance=TRUE,
-                    tuneLength=6)
+               method="parRF",
+               # preProcess=c("center","scale","nzv"),
+               trControl=ctrl,
+               importance=TRUE,
+               tuneLength=6)
 ```
-
+I record the current time `toc`, stop the multicore cluster and print the elapsed time.
 ```{r stop_parallel_and_clock}
 toc <- Sys.time()
 stopCluster(cl)
 print(toc-tic)
 ```
-
+As a check, I print the values that the training process recorded for timing. I am not sure how parallel execution is reflected in the times.
 ```{r print_model_times}
 model$times
 ```
-
+The results of the training process are as follows.
 ```{r print_model}
 model
 ```
-
+The Accuracy over the different number of predictors is plotted as follows.
 ```{r plot_model}
 ggplot(model)
 ```
-
+One can see from the numbers and from the plot that the accuracy varies only in a very narrow band across the number of randomly selected predictors.
 ```{r save_model, include=FALSE, eval=TRUE}
 save(model, file="./RData/model.RData")
 ```
 
+The importance of variables is plotted as follows.
 ```{r plot_varImp}
 ggplot(varImp(model), top=10)
 ```
@@ -288,6 +294,7 @@ qplot(data=as.data.frame(proportions(confMat$table, margin=1), responseName="Pro
 ```
 
 # Prediction
+The data records that are to be reported in the Quiz are predicted. The results are hidden since they are evaluated by the Quiz.
 ```{r predict_quiz, results='hide'}
 prediction <- predict(model,X_quiz)
 prediction
